@@ -20,3 +20,6 @@ scipy==1.17.1
 six==1.17.0
 threadpoolctl==3.7.0
 tzdata==2026.4
+
+# DCU optional: install the DTK-compatible PyTorch package provided by the cluster.
+# Do not install a generic CUDA wheel on the Hygon DCU login node.

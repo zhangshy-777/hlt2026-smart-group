@@ -6,17 +6,22 @@ import matplotlib.pyplot as plt
 from src.config import DATA_DIR, TRAIN_DATA_DIR, TRAIN_CSV, GRID_I, GRID_J, ensure_result_dirs
 from src.svd_model import fit_svd, training_coefficients, project_to_coefficients, reconstruct_from_coefficients
 from src.data_io import load_dataset, read_dat
+from src.accelerator import resolve_backend, describe_backend
 
 def parse_args():
     p = argparse.ArgumentParser(description="海路通智能组 主程序")
     p.add_argument("--data-dir", type=str, default=str(DATA_DIR), help="数据目录")
-    p.add_argument("--energy", type=float, default=0.999, help="POD能量阈值（与答辩口径一致：20模态/99.90%）")
+    p.add_argument("--energy", type=float, default=0.999, help="POD能量阈值（与答辩口径一致：20模态/99.90%%）")
     p.add_argument("--model", choices=["gp", "svr", "mlp"], default="gp", help="代理模型")
     p.add_argument("--seed", type=int, default=42, help="随机种子")
+    p.add_argument("--backend", choices=["auto", "cpu", "dcu"], default="auto",
+                   help="POD计算后端；auto自动使用可见DCU，否则使用CPU")
     return p.parse_args()
 
 def main():
     args = parse_args()
+    backend = resolve_backend(args.backend)
+    print("计算后端:", describe_backend(backend))
     paths = ensure_result_dirs()
 
     x_train, z_train, grid_x, grid_y, files = load_dataset(TRAIN_DATA_DIR, TRAIN_CSV)
@@ -36,7 +41,7 @@ def main():
     print("已保存:", paths["figures"] / "field_check.png")
 
     # ===== 第二步：POD/SVD 降维 =====
-    svd = fit_svd(z_train, args.energy)
+    svd = fit_svd(z_train, args.energy, backend=backend)
     a_train = training_coefficients(svd)
     print("保留模态数 r =", svd.retained_rank,
           " 累计能量 = {:.6f}".format(svd.cumulative_energy[-1]))

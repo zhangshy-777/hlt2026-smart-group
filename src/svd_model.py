@@ -11,11 +11,20 @@ class SVDModel:
     cumulative_energy: np.ndarray # (r,)
     coefficients: np.ndarray      # (132, r) 训练集系数，fit 时算好
 
-def fit_svd(z_train, threshold=0.99):
+def fit_svd(z_train, threshold=0.99, backend="cpu"):
     """输入 (54000, N) 快照矩阵，输出截断后的 SVDModel"""
     mean = z_train.mean(axis=1, keepdims=True)
     zc = z_train - mean                                  # ★中心化（POD 用波动量）
-    U, s, Vt = np.linalg.svd(zc, full_matrices=False)    # U:(54000,132) s:(132,) Vt:(132,132)
+    if backend == "dcu":
+        import torch
+        device = torch.device("cuda")
+        tensor = torch.as_tensor(zc, dtype=torch.float64, device=device)
+        U_t, s_t, Vh_t = torch.linalg.svd(tensor, full_matrices=False)
+        # Some DTK containers ship PyTorch without a working NumPy bridge.
+        # Convert through Python lists so DCU SVD remains usable there.
+        U, s, Vt = (np.asarray(x.detach().cpu().tolist()) for x in (U_t, s_t, Vh_t))
+    else:
+        U, s, Vt = np.linalg.svd(zc, full_matrices=False)    # U:(54000,132) s:(132,) Vt:(132,132)
     energy = s ** 2 / (s ** 2).sum()
     cum = np.cumsum(energy)
     r = int(np.searchsorted(cum, threshold)) + 1         # ★第一个累计能量≥0.99 的阶数

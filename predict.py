@@ -13,6 +13,7 @@ from src.svd_model import fit_svd, training_coefficients, reconstruct_from_coeff
 from src.gp_model import train_ensemble, predict_ensemble
 from src.data_io import load_dataset, read_dat
 from src.inversion import invert_field
+from src.accelerator import resolve_backend, describe_backend
 
 # 赛题「需预测工况.xlsx」：T1-01 ~ T1-09（H=3.20 为外推工况，超出训练上限 3.0）
 TASK1 = [
@@ -39,7 +40,11 @@ def main():
     ap.add_argument("--energy", type=float, default=0.999, help="POD 能量阈值（答辩口径）")
     ap.add_argument("--alpha", type=float, default=0.5, help="反演系数/能量权重")
     ap.add_argument("--h-bias", type=float, default=0.12, help="潜深系统偏差校正")
+    ap.add_argument("--backend", choices=["auto", "cpu", "dcu"], default="auto",
+                    help="POD计算后端；auto自动使用可见DCU，否则使用CPU")
     args = ap.parse_args()
+    backend = resolve_backend(args.backend)
+    print("计算后端:", describe_backend(backend))
 
     paths = ensure_result_dirs()
     pred_dir = RESULTS_DIR / "predict"
@@ -50,7 +55,7 @@ def main():
     x_train, z_train, grid_x, grid_y, _ = load_dataset(TRAIN_DATA_DIR, TRAIN_CSV)
     print(f"  训练工况 {x_train.shape[0]} 个，快照矩阵 {z_train.shape}")
 
-    svd = fit_svd(z_train, args.energy)
+    svd = fit_svd(z_train, args.energy, backend=backend)
     a_train = training_coefficients(svd)
     print(f"  POD 保留模态 r={svd.retained_rank}，累计能量={svd.cumulative_energy[-1]*100:.4f}%")
 

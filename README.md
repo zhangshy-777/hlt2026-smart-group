@@ -40,6 +40,17 @@ python main.py
 python predict.py
 ```
 
+### 海光 DCU（可选）
+
+在已安装 DTK 兼容版 PyTorch 的海光 DCU 容器中，可使用 DCU 加速 POD/SVD：
+
+```bash
+python main.py --backend dcu
+python predict.py --backend dcu
+```
+
+普通 CPU 环境无需安装 PyTorch，默认 `--backend auto` 会自动回退到 NumPy/SciPy。GP 代理模型仍使用 scikit-learn，保证 CPU 与 DCU 容器均可复现。
+
 关键参数（均有命令行默认值，可覆盖）：
 
 | 参数 | 默认 | 含义 |
